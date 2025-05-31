@@ -1,2 +1,2 @@
 # KimiK.1
-Belajar clone ai
+Tahap pengembangan awal dan masih banyak bug 
