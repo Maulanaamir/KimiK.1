@@ -1,8 +1,16 @@
 import React, { useState } from "react";
+import { GoogleGenAI } from "@google/genai";
 
 export default function ChatBox() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+
+  // Ambil API key dan model dari env
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+  const model = import.meta.env.VITE_GOOGLE_MODEL;
+
+  // Inisialisasi client GoogleGenAI dengan API key
+  const ai = new GoogleGenAI({ apiKey });
 
   async function sendMessage() {
     if (!input.trim()) return;
@@ -12,53 +20,34 @@ export default function ChatBox() {
     setInput("");
 
     try {
-      const response = await fetch(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "anthropic/claude-3.7-sonnet", // model ID valid
-            messages: [{ role: "user", content: "Halo! Bisa bantu aku?" }],
-          }),
-        }
-      );
+      // Panggil generateContent dari model yg di env
+      const response = await ai.models.generateContent({
+        model,
+        contents: input,
+      });
 
-      const data = await response.json();
+      // Ambil text balasan dari response
+      const aiReply = response.text;
 
-      if (data.choices && data.choices.length > 0) {
-        const aiMessage = {
-          role: "assistant",
-          content: data.choices[0].message.content,
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-      } else {
-        // Kalau responnya gak sesuai harapan
-        const errMsg = data.error?.message || "No response from AI.";
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: errMsg },
-        ]);
-      }
+      const aiMessage = { role: "assistant", content: aiReply };
+      setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: `Error: ${error.message}` },
+        { role: "assistant", content: `[Error]: ${error.message}` },
       ]);
     }
   }
 
   return (
-    <div>
+    <div style={{ padding: 20 }}>
       <div
         style={{
-          height: 300,
+          height: "300px",
           overflowY: "auto",
           border: "1px solid gray",
           padding: 10,
+          marginBottom: 10,
         }}
       >
         {messages.map((msg, i) => (
@@ -66,18 +55,20 @@ export default function ChatBox() {
             key={i}
             style={{ textAlign: msg.role === "user" ? "right" : "left" }}
           >
-            <b>{msg.role === "user" ? "You" : "AI"}:</b> {msg.content}
+            <b>{msg.role === "user" ? "You" : "Gemini"}:</b> {msg.content}
           </div>
         ))}
       </div>
+
       <input
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-        placeholder="Type your message..."
+        placeholder="Tulis pesan..."
+        style={{ width: "80%", marginRight: 10 }}
       />
-      <button onClick={sendMessage}>Send</button>
+      <button onClick={sendMessage}>Kirim</button>
     </div>
   );
 }
